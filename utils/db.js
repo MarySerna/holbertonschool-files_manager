@@ -9,9 +9,8 @@ class DBclient {
     const uri = `mongodb://${host}:${port}/`;
 
     this.client = null;
-    
-    MongoClient.connect(uri, {useNewUrlParser: true, useUnifiedTopology: true}, (err, db) =>
-    {
+    // Creating a connection to mongodb, saving dabase client to this.client
+    MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true }, (err, db) => {
       if (err) this.client = false;
       else {
         this.client = db.db(database);
@@ -38,3 +37,4 @@ class DBclient {
 
 const dbClient = new DBclient();
 module.exports = dbClient;
+
