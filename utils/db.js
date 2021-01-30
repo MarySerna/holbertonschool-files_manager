@@ -10,7 +10,8 @@ class DBclient {
 
     this.client = null;
     
-    MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true }, (err, db) => {
+    MongoClient.connect(uri, {useNewUrlParser: true, useUnifiedTopology: true}, (err, db) =>
+    {
       if (err) this.client = false;
       else {
         this.client = db.db(database);
