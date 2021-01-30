@@ -26,4 +26,3 @@ router.put('/files/:id/unpublish', (req, res) => putUnpublish(req, res));
 router.get('/files/:id/data', (req, res) => getFile(req, res));
 
 module.exports = router;
-
