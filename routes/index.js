@@ -8,16 +8,20 @@ const {
 
 const router = express.Router();
 
+// app routes
 router.get('/', (req, res) => res.send('Hi, this is a file manager.'));
 router.get('/status', (req, res) => getStatus(req, res));
 router.get('/stats', (req, res) => getStats(req, res));
 
+// user routes
 router.post('/users', (req, res) => postNew(req, res));
 router.get('/users/me', (req, res) => getMe(req, res));
 
+// auth routes
 router.get('/connect', (req, res) => getConnect(req, res));
 router.get('/disconnect', (req, res) => getDisconnect(req, res));
 
+// files routes
 router.post('/files', (req, res) => postUpload(req, res));
 router.get('/files/:id', (req, res) => getShow(req, res));
 router.get('/files', (req, res) => getIndex(req, res));
