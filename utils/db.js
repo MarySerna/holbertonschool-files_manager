@@ -37,4 +37,3 @@ class DBclient {
 
 const dbClient = new DBclient();
 module.exports = dbClient;
-
