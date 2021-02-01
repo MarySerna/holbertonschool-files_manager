@@ -1,33 +1,49 @@
 const sha1 = require('sha1');
-const { v4: uuidv4 } = require('uuid');
+const { ObjectId } = require('mongodb');
 const dbClient = require('../utils/db');
 const redisClient = require('../utils/redis');
 
-/** getConnect - creates an authentication token to sign-in a user*/
-async function getConnect(req, res) {
-  const header = req.headers.authorization.slice(6);
-  const decoded = Buffer.from(header, 'base64').toString(); // decode base64
-  const credentials = decoded.split(':');
+/**
+ * postNew - callback for route POST /users
+ * Adds a user to the datbase
+ * JSON body in post request:
+ *  - email
+ *  - password
+ */
+async function postNew(req, res) {
+  const { email } = req.body; // const email = req.body.email;
+  const pwd = req.body.password;
 
-  const doc = { email: credentials[0], password: sha1(credentials[1]) };
-  const user = await dbClient.client.collection('users').findOne(doc);
-  if (user) {
-    const token = uuidv4();
-    const key = `auth_${token}`;
-    redisClient.set(key, user._id.toString(), 24 * 3600);
-    res.json({ token });
-  } else res.status(401).json({ error: 'Unauthorized' });
+  if (!email) res.status(400).json({ error: 'Missing email' });
+  if (!pwd) res.status(400).json({ error: 'Missing password ' });
+
+  // check if email already exists in db
+  const found = await dbClient.client.collection('users').find({ email }).count();
+  if (found > 0) {
+    res.status(400).json({ error: 'Already exist' });
+    return;
+  }
+  // encrypt password and insert user in datbase
+  const usr = { email, password: sha1(pwd) };
+  const user = await dbClient.client.collection('users').insertOne(usr);
+  if (user) res.status(201).json({ id: user.ops[0]._id, email: user.ops[0].email });
+  else res.status(500).json({ error: 'Could not create user' });
 }
 
-/** getDisconnect - signs-out the user by deleten the connection token in
- the redis client*/
-async function getDisconnect(req, res) {
+/** getMe - retrieves the user that is currently signed-in with its connection token
+ If user is found with the correct token, it sends the user's _id and email back.
+   Header params:
+     - X-token: token used as connection when user signs-in.
+ */
+async function getMe(req, res) {
   const key = req.headers['x-token'];
-  const token = await redisClient.get(`auth_${key}`);
-  if (token) {
-    redisClient.del(`auth_${key}`);
-    res.status(204).end();
+  // get user id from token key
+  const userId = await redisClient.get(`auth_${key}`);
+  if (userId) {
+    // get user in db with user id
+    const user = await dbClient.client.collection('users').findOne({ _id: ObjectId(userId) });
+    res.json({ id: user._id, email: user.email });
   } else res.status(401).json({ error: 'Unauthorized' });
 }
 
-module.exports = { getConnect, getDisconnect };
+module.exports = { postNew, getMe };
