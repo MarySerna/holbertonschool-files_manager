@@ -132,6 +132,13 @@ async function getIndex(req, res) {
   else res.status(404).json({ error: 'Not Found' });
 }
 
+/** getPublish - Callback for PUT files/id/publish
+  sets isPublic to true on a file document given its id
+  Header params:
+    - x-token: connection token created when user signs-in
+  Request params:
+    - id: id of document to modify
+ */
 async function putPublish(req, res) {
   const key = req.headers['x-token']; // get token from header
   const userId = await redisClient.get(`auth_${key}`);
@@ -148,11 +155,18 @@ async function putPublish(req, res) {
   } else res.status(401).json({ error: 'Not found' });
 }
 
+/** putUnpublish - Callback for PUT /files/:id/unpublish
+  sets isPublic to false on a file document given its id
+  Header params:
+    - x-token: connection token created when user signs-in
+  Request params:
+    - id: id of the document to modify
+ */
 async function putUnpublish(req, res) {
-  const key = req.headers['x-token']; 
+  const key = req.headers['x-token']; // get token from header
   const userId = await redisClient.get(`auth_${key}`);
 
-  let user = '';
+  let user = ''; // find and store user
   if (userId) user = await dbClient.client.collection('users').findOne({ _id: ObjectId(userId) });
   else res.status(401).json({ error: 'Unauthorized' });
 
@@ -165,28 +179,28 @@ async function putUnpublish(req, res) {
 }
 
 async function getFile(req, res) {
-  const key = req.headers['x-token'];
+  const key = req.headers['x-token']; // get token from header
   const userId = await redisClient.get(`auth_${key}`);
 
-  let user = '';
+  let user = ''; // find and store user
   if (userId) user = await dbClient.client.collection('users').findOne({ _id: ObjectId(userId) });
 
   const docId = req.params.id;
   const doc = await dbClient.client.collection('files').findOne({ _id: ObjectId(docId) });
   if (doc) {
+    // if doc is not public, the user must be authenticated in order to read the file
     if (!doc.isPublic && user === '') res.status(404).json({ error: 'Not Found' });
     else if (doc.type === 'folder') res.status(400).json({ error: 'A folder doesn\'t have content' });
     else {
       fs.readFile(doc.localPath, 'utf-8', (err, data) => {
-        if (err) res.status(401).json({ error: 'Not found' });
+        if (err) res.status(401).json({ error: 'Not found' }); // can't read file
         else {
           res.setHeader('Content-Type', mime.lookup(doc.name));
           res.end(data);
         }
       });
     }
-  }
-  else res.status(401).json({ error: 'Not found' });
+  } else res.status(401).json({ error: 'Not found' }); // doc not found
 }
 
 module.exports = {
